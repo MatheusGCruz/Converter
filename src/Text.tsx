@@ -230,11 +230,6 @@ class Text {
 
     if (braceCount > 0) {
       let lastBrace = -1;
-      let count = 0;
-      for (let i = 0; i < value.length; i++) {
-        if (value[i] === '{') { count++; lastBrace = i; }
-        if (value[i] === '}') count--;
-      }
       const { line, column } = Text.findLineAndColumn(value, lastBrace);
       return { valid: false, error: `Invalid CSS at line ${line}, column ${column}: unclosed block` };
     }
@@ -285,12 +280,6 @@ class Text {
     if (stack.length > 0) {
       const openChar = stack[stack.length - 1];
       let lastPos = -1;
-      let depth = 0;
-      for (let i = 0; i < value.length; i++) {
-        if (value[i] === openChar) { depth++; lastPos = i; }
-        const closeMap: Record<string, string> = { '(': ')', '[': ']', '{': '}' };
-        if (value[i] === closeMap[openChar]) depth--;
-      }
       const { line, column } = Text.findLineAndColumn(value, lastPos);
       return { valid: false, error: `Invalid JavaScript at line ${line}, column ${column}: unclosed '${openChar}'` };
     }

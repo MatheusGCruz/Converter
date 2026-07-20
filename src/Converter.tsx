@@ -4,9 +4,26 @@ import Distance from './Distance';
 import Temperature from './Temperature';
 import Volume from './Volume';
 import Area from './Area';
+import Time from './Time';
+import Text from './Text';
 import './Converter.css';
 
 const UNIT_GROUPS: UnitGroup[] = [
+  {
+    label: 'Text',
+    units: [
+      { value: 'auto', label: 'Text Format - Auto' },
+      { value: 'json', label: 'JSON' },
+      { value: 'xml', label: 'XML' },
+      { value: 'html', label: 'HTML' },
+      { value: 'css', label: 'CSS' },
+      { value: 'javascript', label: 'JavaScript' },
+      { value: 'yaml', label: 'YAML' },
+      { value: 'csv', label: 'CSV' },
+      { value: 'regex', label: 'Text - Regex' },
+      { value: 'regex_auto', label: 'Text - Regex (auto)' },
+    ],
+  },
   {
     label: 'Distance',
     units: [
@@ -55,6 +72,17 @@ const UNIT_GROUPS: UnitGroup[] = [
       { value: 'acres', label: 'Acres' },
     ],
   },
+  {
+    label: 'Time',
+    units: [
+      { value: 'datetime_short', label: 'DateTime (YY-MM-DD hh:mm)' },
+      { value: 'datetime_medium', label: 'DateTime (YY-MM-DD hh:mm:ss)' },
+      { value: 'datetime_long', label: 'DateTime (YY-MM-DD hh:mm:ss.mls)' },
+      { value: 'epoch', label: 'EPOCH' },
+      { value: 'time', label: 'Time (hh:mm:ss.mls)' },
+      { value: 'weeks', label: 'Weeks (WW DD hh:mm:ss.mls)' },
+    ],
+  },
 ];
 
 function convertLines(
@@ -63,11 +91,26 @@ function convertLines(
   toUnit: string,
   group: string
 ): string {
+  if (group === 'Text') {
+    try {
+      return Text.convert(input, fromUnit, toUnit);
+    } catch {
+      return 'Error: Unable to process text';
+    }
+  }
+
   const lines = input.split('\n');
   return lines
     .map((line) => {
       const trimmed = line.trim();
       if (trimmed === '') return '';
+      if (group === 'Time') {
+        try {
+          return Time.convert(trimmed, fromUnit, toUnit);
+        } catch {
+          return trimmed;
+        }
+      }
       const num = parseFloat(trimmed);
       if (isNaN(num)) return trimmed;
       try {
@@ -99,7 +142,25 @@ const Converter: React.FC = () => {
   const [rightValue, setRightValue] = useState('');
 
   const rightGroupData = UNIT_GROUPS.find((g) => g.label === leftGroup);
-  const rightGroups = rightGroupData ? [rightGroupData] : [];
+
+  const leftGroups = UNIT_GROUPS.map((g) =>
+    g.label === 'Text'
+      ? { ...g, units: g.units.filter((u) => u.value === 'auto' || u.value === 'regex') }
+      : g
+  );
+
+  const rightGroups = rightGroupData
+    ? [{
+        ...rightGroupData,
+        units: leftGroup === 'Text'
+          ? leftUnit === 'regex'
+            ? rightGroupData.units.filter((u) => u.value === 'regex_auto')
+            : rightGroupData.units.filter((u) =>
+                ['json', 'xml', 'html', 'css', 'javascript', 'yaml', 'csv'].includes(u.value)
+              )
+          : rightGroupData.units,
+      }]
+    : [];
 
   const backgroundStyle: React.CSSProperties = {
     backgroundImage: `url(${process.env.PUBLIC_URL}/background.png)`,
@@ -117,6 +178,9 @@ const Converter: React.FC = () => {
   const handleLeftUnitSelect = (groupLabel: string, unitValue: string) => {
     setLeftGroup(groupLabel);
     setLeftUnit(unitValue);
+    if (groupLabel === 'Text' && unitValue === 'regex') {
+      setRightUnit('regex_auto');
+    }
   };
 
   const handleRightUnitSelect = (_groupLabel: string, unitValue: string) => {
@@ -142,7 +206,7 @@ const Converter: React.FC = () => {
       <div className="converter-container">
         <div className="converter-column converter-column-left">
           <CollapsibleDropdown
-            groups={UNIT_GROUPS}
+            groups={leftGroups}
             selectedGroup={leftGroup}
             selectedUnit={leftUnit}
             expandedGroup={expandedGroup}
@@ -190,6 +254,7 @@ const Converter: React.FC = () => {
             <button
               className="arrow-button arrow-button-left"
               title="Send to left"
+              disabled={leftUnit === 'auto' || leftUnit === 'regex'}
               onClick={handleConvertRightToLeft}
             >
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

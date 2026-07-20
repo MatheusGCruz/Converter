@@ -177,3 +177,9 @@
 .arrow-button:active {
   transform: scale(0.95);
 }
+
+.arrow-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
